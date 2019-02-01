@@ -5,7 +5,7 @@
 #define PRODUCT_NAME "SpaceSalmon"
 #define VOLUME_LABEL "SpaceSalmon"
 #define INDEX_URL "http://wiki.stanfordssi.org/Space_Salmon"
-#define BOARD_ID "SAMD51J20A-SS2.0"
+#define BOARD_ID "SAME51J20A-SS2.0"
 
 #define USB_VID 0x239A
 #define USB_PID 0x0021
