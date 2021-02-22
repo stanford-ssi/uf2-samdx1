@@ -1,6 +1,7 @@
 #ifndef UF2_H
 #define UF2_H 1
 
+#include <stdint.h>
 #include "board_config.h"
 
 #include "sam.h"
@@ -14,10 +15,14 @@
 #include <stdio.h>
 #include <string.h>
 
+
+#include "configkeys.h"
+
+
 #undef DISABLE
 #undef ENABLE
 
-// always go for crystalless - smaller and more compatiable
+// always go for crystalless - smaller and more compatible
 #ifndef CRYSTALLESS
 #define CRYSTALLESS 1
 #endif
@@ -54,6 +59,12 @@
 #define USE_WEBUSB 1
 // Doesn't yet disable code, just enumeration
 #define USE_MSC 1
+
+#ifdef BOARD_SCREEN
+#define USE_SCREEN 1
+#else
+#define USE_SCREEN 0
+#endif
 
 // If enabled, bootloader will start on power-on and every reset. A second reset
 // will start the app. This only happens if the app says it wants that (see SINGLE_RESET() below).
@@ -125,7 +136,13 @@
 // End of config
 
 #define USE_MONITOR (USE_CDC || USE_UART)
+
+#ifdef SAMD51
+// 51 also runs at 48MHz in bootloader mode, but it's still faster
+#define TIMER_STEP 2000
+#else
 #define TIMER_STEP 1500
+#endif
 
 #ifdef BOARD_NEOPIXEL_PIN
 #define COLOR_START 0x040000
@@ -233,11 +250,18 @@ void padded_memcpy(char *dst, const char *src, int len);
 #define DBL_TAP_MAGIC_QUICK_BOOT 0xf02669ef
 
 #if USE_SINGLE_RESET
+#ifdef SAMD21
 #define SINGLE_RESET() (*((uint32_t *)0x20B4) == 0x87eeb07c)
+#endif
+#ifdef SAMD51
+#define SINGLE_RESET() (*((uint32_t *)0x4268) == 0x87eeb07c)
+#endif
 #endif
 
 void resetIntoApp(void);
 void resetIntoBootloader(void);
+extern uint32_t current_cpu_frequency_MHz;
+extern volatile bool led_tick_on;
 void system_init(void);
 
 #define LED_TICK led_tick
@@ -249,15 +273,65 @@ void led_signal(void);
 void led_init(void);
 void RGBLED_set_color(uint32_t color);
 
+// Not all targets have a LED
+#if defined(LED_PIN)
+#if !defined(LED_PIN_PULLUP)
 #define LED_MSC_OFF() PINOP(LED_PIN, OUTCLR)
 #define LED_MSC_ON() PINOP(LED_PIN, OUTSET)
+#else
+#define LED_MSC_OFF() PINOP(LED_PIN, OUTSET)
+#define LED_MSC_ON() PINOP(LED_PIN, OUTCLR)
+#endif
 #define LED_MSC_TGL() PINOP(LED_PIN, OUTTGL)
+#else
+#define LED_MSC_OFF()
+#define LED_MSC_ON()
+#define LED_MSC_TGL()
+#endif
+
+// Not all targets have a TX LED
+#if defined(LED_TX_PIN)
+#if defined(LED_TX_PIN_PULLUP)
+#define LED_TX_OFF() PINOP(LED_TX_PIN, OUTSET)
+#define LED_TX_ON() PINOP(LED_TX_PIN, OUTCLR)
+#else
+#define LED_TX_OFF() PINOP(LED_TX_PIN, OUTCLR)
+#define LED_TX_ON() PINOP(LED_TX_PIN, OUTSET)
+#endif
+#define LED_TX_TGL() PINOP(LED_TX_PIN, OUTTGL)
+#else
+#define LED_TX_OFF()
+#define LED_TX_ON()
+#define LED_TX_TGL()
+#endif
+
+// Not all targets have a RX LED
+#if defined(LED_RX_PIN)
+#if defined(LED_RX_PIN_PULLUP)
+#define LED_RX_OFF() PINOP(LED_RX_PIN, OUTSET)
+#define LED_RX_ON() PINOP(LED_RX_PIN, OUTCLR)
+#else
+#define LED_RX_OFF() PINOP(LED_RX_PIN, OUTCLR)
+#define LED_RX_ON() PINOP(LED_RX_PIN, OUTSET)
+#endif
+#define LED_RX_TGL() PINOP(LED_RX_PIN, OUTTGL)
+#else
+#define LED_RX_OFF()
+#define LED_RX_ON()
+#define LED_RX_TGL()
+#endif
 
 extern uint32_t timerHigh, resetHorizon;
 void timerTick(void);
 void delay(uint32_t ms);
 void hidHandoverLoop(int ep);
 void handoverPrep(void);
+
+// Useful for debugging.
+#ifdef BLINK_DEBUG
+void blink_n(uint32_t pin, uint32_t n, uint32_t interval);
+void blink_n_forever(uint32_t pin, uint32_t n, uint32_t interval);
+#endif
 
 #define CONCAT_1(a, b) a##b
 #define CONCAT_0(a, b) CONCAT_1(a, b)
@@ -270,5 +344,13 @@ STATIC_ASSERT(FLASH_NUM_ROWS * 4 == FLASH_NB_OF_PAGES);
 #endif
 
 extern const char infoUf2File[];
+
+#if USE_SCREEN
+void draw_screen(void);
+void draw_hf2(void);
+void draw_drag(void);
+void screen_init(void);
+void screen_early_init(void);
+#endif
 
 #endif

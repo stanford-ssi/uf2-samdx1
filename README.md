@@ -30,7 +30,7 @@ a UF2 file is written and immediately write it to flash.
 * USB CDC (Serial emulation) monitor mode compatible with Arduino
   (including XYZ commands) and BOSSA flashing tool
 * USB MSC interface for writing UF2 files
-* reading of the contests of the flash as an UF2 file via USB MSC
+* reading of the content of the flash as an UF2 file via USB MSC
 * UART Serial (real serial wire) monitor mode (typically disabled due to space constraints)
 * In-memory logging for debugging - use the `logs` target to extract the logs using `openocd`
 * double-tap reset to stay in the bootloader mode
@@ -52,7 +52,7 @@ external flash chip, SD card etc.).
 
 These configuration values can be read from `INFO_UF2.TXT` file.
 Presence of this file can be tested to see if the board supports `UF2` flashing,
-while contest, particularly `Board-ID` field, can be used for feature detection.
+while the contents, particularly `Board-ID` field, can be used for feature detection.
 
 The current flash contents of the board is exposed as `CURRENT.UF2` file.
 This file includes the bootloader address space. The last word of bootloader
@@ -117,7 +117,7 @@ to temporarily turn off the protection. In gdb the command is:
 
 * `make` and an Unix environment
 * `node`.js in path (optional)
-* `arm-none-eabi-gcc` in the path (the one coming with Yotta will do just fine)
+* `arm-none-eabi-gcc` in the path (the one coming with Yotta will do just fine). You can get the latest version from ARM: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
 * `openocd` - you can use the one coming with Arduino (after your install the M0 board support)
 
 Atmel Studio is not supported.
@@ -132,7 +132,7 @@ Otherwise, you can use other SAMD21 board and an external `openocd` compatible
 debugger. IBDAP is cheap and seems to work just fine. Another option is to use
 Raspberry Pi and native bit-banging.
 
-`openocd` will flash 16k, meaning the beginning of user program (if any) will
+`openocd` will flash 16k, meaning that on SAMD21 the beginning of user program (if any) will
 be overwritten with `0xff`. This also means that after fresh flashing of bootloader
 no double-tap reset is necessary, as the bootloader will not try to start application
 at `0xffffffff`.
@@ -145,7 +145,7 @@ The default board is `zero`. You can build a different one using:
 make BOARD=metro_m0
 ```
 
-If you're working on different board, it's best to create `Makefile.local`
+If you're working on different board, it's best to create `Makefile.user`
 with say `BOARD=metro` to change the default.
 The names `zero` and `metro` refer to subdirectories of `boards/`.
 
@@ -167,8 +167,8 @@ There is a number of configuration parameters at the top of `uf2.h` file.
 Adjust them to your liking.
 
 By default, you cannot enable all the features, as the bootloader would exceed
-the 8k allocated to it by Arduino etc. It will assert on startup that it's not bigger
-than 8k. Also, the linker script will not allow it.
+the 8k(SAMD21)/16k(SAMD51) allocated to it by Arduino etc. It will assert on startup that it's not bigger
+than 8k(SAMD21)/16k(SAMD51). Also, the linker script will not allow it.
 
 Three typical configurations are:
 
@@ -186,7 +186,7 @@ then CDC might work and MSC will not work;
 otherwise, if you have no drivers, MSC will work, and CDC will work on Windows 10 only.
 Thus, it's best to set the USB ID to one for which there are no drivers.
 
-The bootloader sits at 0x00000000, and the application starts at 0x00002000.
+The bootloader sits at 0x00000000, and the application starts at 0x00002000 (SAMD21) or 0x00004000 (SAMD51).
 
 ## Code of Conduct
 

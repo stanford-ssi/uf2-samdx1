@@ -27,7 +27,8 @@
  *
  */
 
-#include "samd51.h"
+#include "sam.h"
+#include "component-version.h"
 
 /* Initialize segments */
 extern uint32_t _sfixed;
@@ -244,17 +245,30 @@ const DeviceVectors exception_table = {
         .pvStack                = (void*) (&_estack),
 
         .pfnReset_Handler       = (void*) Reset_Handler,
+#if COMPONENT_VERSION >= 10001
+        .pfnNonMaskableInt_Handler = (void*) NMI_Handler,
+#else
         .pfnNMI_Handler         = (void*) NMI_Handler,
+#endif
         .pfnHardFault_Handler   = (void*) HardFault_Handler,
+#if COMPONENT_VERSION >= 10001
+        .pfnMemManagement_Handler = (void*) MemManage_Handler,
+#else
         .pfnMemManage_Handler   = (void*) MemManage_Handler,
+#endif
         .pfnBusFault_Handler    = (void*) BusFault_Handler,
         .pfnUsageFault_Handler  = (void*) UsageFault_Handler,
         .pvReservedM9           = (void*) (0UL), /* Reserved */
         .pvReservedM8           = (void*) (0UL), /* Reserved */
         .pvReservedM7           = (void*) (0UL), /* Reserved */
         .pvReservedM6           = (void*) (0UL), /* Reserved */
+#if COMPONENT_VERSION >= 10001
+        .pfnSVCall_Handler      = (void*) SVC_Handler,
+        .pfnDebugMonitor_Handler    = (void*) DebugMon_Handler,
+#else
         .pfnSVC_Handler         = (void*) SVC_Handler,
         .pfnDebugMon_Handler    = (void*) DebugMon_Handler,
+#endif
         .pvReservedM3           = (void*) (0UL), /* Reserved */
         .pfnPendSV_Handler      = (void*) PendSV_Handler,
         .pfnSysTick_Handler     = (void*) SysTick_Handler,
@@ -302,8 +316,13 @@ const DeviceVectors exception_table = {
         .pfnEVSYS_3_Handler     = (void*) EVSYS_3_Handler,        /* 39 EVSYS_EVD_3, EVSYS_OVR_3 */
         .pfnEVSYS_4_Handler     = (void*) EVSYS_4_Handler,        /* 40 EVSYS_EVD_10, EVSYS_EVD_11, EVSYS_EVD_4, EVSYS_EVD_5, EVSYS_EVD_6, EVSYS_EVD_7, EVSYS_EVD_8, EVSYS_EVD_9, EVSYS_OVR_10, EVSYS_OVR_11, EVSYS_OVR_4, EVSYS_OVR_5, EVSYS_OVR_6, EVSYS_OVR_7, EVSYS_OVR_8, EVSYS_OVR_9 */
         .pfnPAC_Handler         = (void*) PAC_Handler,            /* 41 Peripheral Access Controller */
+#if COMPONENT_VERSION >= 10001
+        .pvReserved42           = (void*) (0UL),                  /* 42 Reserved */
+        .pvReserved43           = (void*) (0UL),                  /* 43 Reserved */
+#else
         .pfnTAL_0_Handler       = (void*) TAL_0_Handler,          /* 42 TAL_BRK */
         .pfnTAL_1_Handler       = (void*) TAL_1_Handler,          /* 43 TAL_IPS_0, TAL_IPS_1 */
+#endif
         .pvReserved44           = (void*) (0UL),                  /* 44 Reserved */
         .pfnRAMECC_Handler      = (void*) RAMECC_Handler,         /* 45 RAM ECC */
         .pfnSERCOM0_0_Handler   = (void*) SERCOM0_0_Handler,      /* 46 SERCOM0_0 */

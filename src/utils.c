@@ -4,19 +4,47 @@
 static uint32_t timerLow;
 uint32_t timerHigh, resetHorizon;
 
-void delay(uint32_t ms) {
-    // SAMD21 starts up at 1mhz by default.
-    #ifdef SAMD21
-    ms <<= 8;
-    #endif
-    // SAMD51 starts up at 48mhz by default.
-    #ifdef SAMD51
-    ms <<= 12;
-    #endif
-    for (int i = 1; i < ms; ++i) {
-        asm("nop");
+void __attribute__ ((noinline)) delay(uint32_t ms) {
+    // These multipliers were determined empirically and are only approximate.
+    // After the pulsing LED is enabled (led_tick_on), the multipliers need to change
+    // due to the interrupt overhead of the pulsing.
+    // SAMD21 starts up at 1MHz by default.
+#ifdef SAMD21
+    uint32_t count = ms * (current_cpu_frequency_MHz) * (led_tick_on ? 149: 167);
+#endif
+#ifdef SAMD51
+    // SAMD51 starts up at 48MHz by default, and we set the clock to
+    // 48MHz, so we don't need to adjust for current_cpu_frequency_MHz.
+    uint32_t count = ms * (led_tick_on ? 6353 : 6826);
+#endif
+    for (uint32_t i = 1; i < count; ++i) {
+        asm volatile("");
     }
 }
+
+// Useful for debugging.
+// PIN_PA19 is D12 on Metro M0, D11 on Metro M4
+#ifdef BLINK_DEBUG
+void blink_n(uint32_t pin, uint32_t n, uint32_t interval) {
+    // Start out off.
+    PINOP(pin, DIRSET);
+    PINOP(pin, OUTCLR);
+    delay(interval);
+    for (int i = 0; i < n; ++i) {
+        PINOP(pin, OUTSET);
+        delay(interval);
+        PINOP(pin, OUTCLR);
+        delay(interval);
+    }
+}
+
+void blink_n_forever(uint32_t pin, uint32_t n, uint32_t interval) {
+    while(1) {
+        blink_n(pin, n, interval);
+        delay(interval*5);
+    }
+}
+#endif
 
 void timerTick(void) {
     if (timerLow-- == 0) {
@@ -108,9 +136,11 @@ void logval(const char *lbl, uint32_t v) {
 static uint32_t now;
 static uint32_t signal_end;
 int8_t led_tick_step = 1;
+volatile bool led_tick_on = false;
 static uint8_t limit = 200;
 
 void led_tick() {
+    led_tick_on = true;
     now++;
     if (signal_end) {
         if (now == signal_end - 1000) {
@@ -141,7 +171,9 @@ void led_signal() {
 }
 
 void led_init() {
+#if defined(LED_PIN)
     PINOP(LED_PIN, DIRSET);
+#endif
     LED_MSC_ON();
 
 #if defined(BOARD_RGBLED_CLOCK_PIN)
@@ -151,6 +183,26 @@ void led_init() {
 
     // This won't work for neopixel, because we're running at 1MHz or thereabouts...
     RGBLED_set_color(COLOR_LEAVE);
+#endif
+
+#if USE_SCREEN
+    // turn display backlight
+    screen_early_init();
+#endif
+
+#if defined(LED_TX_PIN)
+    PINOP(LED_TX_PIN, DIRSET);
+    LED_TX_OFF();
+#endif
+
+#if defined(LED_RX_PIN)
+    PINOP(LED_RX_PIN, DIRSET);
+    LED_RX_OFF();
+#endif
+
+#if defined(BOARD_NEOPIXEL_POWERPIN)
+    PINOP(BOARD_NEOPIXEL_POWERPIN, DIRSET);
+    PINOP(BOARD_NEOPIXEL_POWERPIN, OUTSET);
 #endif
 }
 
